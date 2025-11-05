@@ -743,6 +743,8 @@ function listWorlds() {
     .map(k => k.replace('world-', ''));
     }
     function tick() {
+     hud.innerText = `Pos: ${player.pos.x.toFixed(2)}, ${player.pos.y.toFixed(2)}, ${player.pos.z.toFixed(2)}\nSelected: ${BLOCKS[selectedBlockId].name} (${inventory[selectedBlockId]})\nPlacing: ${allowPlacing ? 'ENABLED' : 'DISABLED'} (toggle: P)`;
+    
   requestAnimationFrame(tick);
 
   // Example: place block in front of player

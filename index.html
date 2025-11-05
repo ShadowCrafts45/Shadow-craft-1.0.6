@@ -295,6 +295,26 @@
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
   animation: fadeIn 0.5s ease-out;
       }
+   #floating-save-button {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 80;
+  padding: 8px 14px;
+  font-size: 14px;
+  background: linear-gradient(90deg, #6bcaff, #3d9eff);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  cursor: pointer;
+  font-weight: bold;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+#floating-save-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+                              }
     
   </style>
 </head>
@@ -309,11 +329,9 @@
     <button id="new-world-button">🌍 Create New World</button>
     <button id="toggle-tutorial-button">📘 Tutorial</button>
   </div>
-</div>
-<div style="margin-top: 12px; display: flex; gap: 12px; padding-left:15px">
-  <button id="manual-save-button">💾 Save</button>
-  <button id="manual-load-button">📂 Load</button>
-</div>
+  </div>
+  <button id="floating-save-button">💾 Save</button>
+  
   
 <div id="tutorial-box" style="display:none;">
   <h2>🕹️ How to Play</h2>
@@ -785,10 +803,8 @@ if (world.get(x, y, z) === BLOCK_AIR) {
     inputState.break = false;
   }
     }
- const manualSaveBtn = document.getElementById('manual-save-button');
-const manualLoadBtn = document.getElementById('manual-load-button');
-
-manualSaveBtn.addEventListener('click', () => {
+ const floatingSaveBtn = document.getElementById('floating-save-button');
+floatingSaveBtn.addEventListener('click', () => {
   if (currentWorldName) {
     saveWorld(currentWorldName, world, player);
     alert('World saved!');
@@ -796,15 +812,7 @@ manualSaveBtn.addEventListener('click', () => {
     alert('No world loaded.');
   }
 });
-
-manualLoadBtn.addEventListener('click', () => {
-  if (currentWorldName) {
-    const success = loadWorld(currentWorldName, world, player);
-    alert(success ? 'World loaded!' : 'Failed to load world.');
-  } else {
-    alert('No world selected.');
-  }
-});
+      
     
     function setupControls(player, camera){
       const btnToggleView = document.getElementById('btn-toggle-view');

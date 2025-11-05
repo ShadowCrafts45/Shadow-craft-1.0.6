@@ -423,6 +423,8 @@ listWorlds().forEach(name => {
 loadBtn.addEventListener('click', () => {
   const name = select.value;
   if (loadWorld(name, world, player)) {
+    currentWorldName = name;
+      
     document.getElementById('start-screen').style.display = 'none';
     document.getElementById('tutorial-box').style.display = 'none';
       tick();
@@ -441,6 +443,8 @@ newBtn.addEventListener('click', () => {
   opt.textContent = name;
   select.appendChild(opt);
   select.value = name;
+  currentWorldName = name;
+    
   document.getElementById('start-screen').style.display = 'none';
   document.getElementById('tutorial-box').style.display = 'none';
  tick();

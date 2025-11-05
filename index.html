@@ -743,11 +743,11 @@ function listWorlds() {
     .map(k => k.replace('world-', ''));
     }
     function tick() {
-     hud.innerText = `Pos: ${player.pos.x.toFixed(2)}, ${player.pos.y.toFixed(2)}, ${player.pos.z.toFixed(2)}\nSelected: ${BLOCKS[selectedBlockId].name} (${inventory[selectedBlockId]})\nPlacing: ${allowPlacing ? 'ENABLED' : 'DISABLED'} (toggle: P)`;
-    
   requestAnimationFrame(tick);
 
-  // Example: place block in front of player
+  // ✅ Always show HUD info
+  hud.innerText = `Tick running\nSelected: ${BLOCKS[selectedBlockId].name}\nPlacing: ${allowPlacing ? 'ENABLED' : 'DISABLED'}`;
+
   if (inputState.place && allowPlacing) {
     const x = Math.floor(player.pos.x);
     const y = Math.floor(player.pos.y - 1);
@@ -759,10 +759,9 @@ function listWorlds() {
       saveWorld(currentWorldName, world, player);
     }
 
-    inputState.place = false; // prevent repeat
+    inputState.place = false;
   }
 
-  // Example: break block in front of player
   if (inputState.break) {
     const x = Math.floor(player.pos.x);
     const y = Math.floor(player.pos.y - 1);
@@ -774,12 +773,10 @@ function listWorlds() {
       saveWorld(currentWorldName, world, player);
     }
 
-    inputState.break = false; // prevent repeat
+    inputState.break = false;
   }
-
-  // You can add movement, camera updates, etc. here too
     }
-    
+              
     function setupControls(player, camera){
       const btnToggleView = document.getElementById('btn-toggle-view');
 if (btnToggleView) {

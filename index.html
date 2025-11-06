@@ -67,7 +67,52 @@
     #progress { position:fixed; left:50%; transform:translateX(-50%); bottom:156px; z-index:68; width:260px; height:14px; background:rgba(255,255,255,0.06); border-radius:8px; overflow:hidden; display:none }
     #progress > div { height:100%; width:0%; background:linear-gradient(90deg,#ffd36b,#ff8a3d); border-radius:8px }
     @media (pointer: fine) { #controls-ui { display:none; } }
-    @media (max-width:420px) {#crosshair { font-size: 22px; } #look-area { width:260px; height:420px } #joy-left { width:110px; height:110px } .hotbar-slot { width:52px; height:52px } }
+    @media (max-width: 420px) {
+  #crosshair {
+    font-size: 20px;
+  }
+  #look-area {
+    width: 220px;
+    height: 360px;
+  }
+  #joy-left {
+    width: 100px;
+    height: 100px;
+  }
+  .btn {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+  .hotbar-slot {
+    width: 48px;
+    height: 48px;
+    font-size: 10px;
+  }
+  .hotbar-slot .icon {
+    width: 28px;
+    height: 28px;
+    margin-bottom: 4px;
+  }
+  .hotbar-slot .count {
+    font-size: 9px;
+  }
+  #inventory-grid {
+    grid-template-columns: repeat(9, 48px);
+    gap: 6px;
+  }
+  .inventory-slot {
+    width: 48px;
+    height: 48px;
+    font-size: 10px;
+  }
+  .inventory-slot .icon {
+    width: 28px;
+    height: 28px;
+    margin-bottom: 2px;
+  }
+    }
+    
     canvas { display:block; }
     #inventory-panel {
       position: fixed;
@@ -716,15 +761,27 @@
       hud.innerText = `Tick running\nSelected: ${BLOCKS[selectedBlockId].name}\nPlacing: ${allowPlacing ? 'ENABLED' : 'DISABLED'}`;
 
       if (inputState.place && allowPlacing) {
-        const x = Math.floor(player.pos.x);
-        const y = Math.floor(player.pos.y - 1.5); // slightly lower to avoid placing on self
-        const z = Math.floor(player.pos.z);
-        if (world.get(x, y, z) === BLOCK_AIR) {
-          world.set(x, y, z, selectedBlockId);
-          world.updateMeshes();
-        }
-        inputState.place = false;
-      }
+  const x = Math.floor(player.pos.x);
+  const y = Math.floor(player.pos.y - 1.5);
+  const z = Math.floor(player.pos.z);
+
+  // Only place if there's a block below or adjacent
+  const hasSupport = (
+    world.get(x, y - 1, z) !== BLOCK_AIR ||
+    world.get(x + 1, y, z) !== BLOCK_AIR ||
+    world.get(x - 1, y, z) !== BLOCK_AIR ||
+    world.get(x, y, z + 1) !== BLOCK_AIR ||
+    world.get(x, y, z - 1) !== BLOCK_AIR
+  );
+
+  if (world.get(x, y, z) === BLOCK_AIR && hasSupport) {
+    world.set(x, y, z, selectedBlockId);
+    world.updateMeshes();
+  }
+
+  inputState.place = false;
+    }
+      
 
       if (inputState.break) {
         const x = Math.floor(player.pos.x);

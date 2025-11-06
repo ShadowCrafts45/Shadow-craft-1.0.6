@@ -469,7 +469,7 @@
       tick(); // Start game loop
       
     });
-      
+    
     function createPlayerModel() {
       const skinCanvas = makePlayerSkinCanvas();
       const skinTexture = new THREE.CanvasTexture(skinCanvas);
@@ -530,10 +530,29 @@ const loadedChunks = new Map(); // key: `${cx},${cz}`, value: VoxelWorld
     
     let selectedBlockId = 1;
     let allowPlacing = true;
+// Converts 3D chunk-local coordinates to 1D index
+idx(x, y, z) {
+  return x + this.w * (z + this.d * y);
+}
 
-    function idx(x,y,z){ return x + WORLD_W*(z + WORLD_D*y); }
+// Checks if coordinates are inside this chunk
+inBounds(x, y, z) {
+  return x >= 0 && y >= 0 && z >= 0 && x < this.w && y < this.h && z < this.d;
+}
+
+// Gets block value at chunk-local coordinates
+get(x, y, z) {
+  if (!this.inBounds(x, y, z)) return BLOCK_AIR;
+  return this.blocks[this.idx(x, y, z)];
+}
+
+// Sets block value at chunk-local coordinates
+set(x, y, z, value) {
+  if (!this.inBounds(x, y, z)) return;
+  this.blocks[this.idx(x, y, z)] = value;
+      }
+                              
     function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
-    function inBounds(x,y,z){ return x>=0 && y>=0 && z>=0 && x<WORLD_W && y<WORLD_H && z<WORLD_D; }
 
     // procedural textures (small canvases)
     const textureCanvases = {};
@@ -701,6 +720,23 @@ const loadedChunks = new Map(); // key: `${cx},${cz}`, value: VoxelWorld
     }
   }
     }
+      function getBlockGlobal(x, y, z) {
+  const cx = Math.floor(x / CHUNK_SIZE);
+  const cz = Math.floor(z / CHUNK_SIZE);
+  const chunk = loadedChunks.get(`${cx},${cz}`);
+  if (!chunk) return BLOCK_AIR;
+  return chunk.get(x % CHUNK_SIZE, y, z % CHUNK_SIZE);
+}
+
+function setBlockGlobal(x, y, z, blockId) {
+  const cx = Math.floor(x / CHUNK_SIZE);
+  const cz = Math.floor(z / CHUNK_SIZE);
+  const chunk = loadedChunks.get(`${cx},${cz}`);
+  if (!chunk) return;
+  chunk.set(x % CHUNK_SIZE, y, z % CHUNK_SIZE, blockId);
+  chunk.updateMeshes();
+                 }
+  
        function updateChunksAroundPlayer(player, scene) {
   const cx = Math.floor(player.pos.x / CHUNK_SIZE);
   const cz = Math.floor(player.pos.z / CHUNK_SIZE);
@@ -717,8 +753,6 @@ const loadedChunks = new Map(); // key: `${cx},${cz}`, value: VoxelWorld
     }
       
       inBounds(x,y,z){ return x>=0 && y>=0 && z>=0 && x<this.w && y<this.h && z<this.d; }
-      get(x,y,z){ if(!this.inBounds(x,y,z)) return BLOCK_AIR; return this.blocks[idx(x,y,z)]; }
-      set(x,y,z,v){ if(!this.inBounds(x,y,z)) return; this.blocks[idx(x,y,z)] = v; }
       updateMeshes(){
         // clear previous
         while(this.group.children.length){ const c = this.group.children.pop(); if(c.geometry) c.geometry.dispose?.(); if(c.material) c.material.dispose?.(); }
@@ -794,35 +828,33 @@ updateChunksAroundPlayer(player, scene);
     
       // ✅ Always show HUD info
       hud.innerText = `Tick running\nSelected: ${BLOCKS[selectedBlockId].name}\nPlacing: ${allowPlacing ? 'ENABLED' : 'DISABLED'}`;
-
-     if (inputState.place && allowPlacing) {
+if (inputState.place && allowPlacing) {
   raycaster.setFromCamera(mouse, camera);
-  const intersects = raycaster.intersectObjects(world.group.children, true);
+  const intersects = raycaster.intersectObjects(scene.children, true); // use scene instead of world.group
 
   if (intersects.length > 0) {
     const hit = intersects[0];
     const pos = hit.point.clone().add(hit.face.normal).floor();
     const x = pos.x, y = pos.y, z = pos.z;
 
-    if (world.get(x, y, z) === BLOCK_AIR) {
-      world.set(x, y, z, selectedBlockId);
-      world.updateMeshes();
+    if (getBlockGlobal(x, y, z) === BLOCK_AIR) {
+      setBlockGlobal(x, y, z, selectedBlockId);
     }
   }
 
   inputState.place = false;
-        }
-                
+    }
+      
       
 
       if (inputState.break) {
-        const x = Math.floor(player.pos.x);
-        const y = Math.floor(player.pos.y - 1);
-        const z = Math.floor(player.pos.z);
-        world.set(x, y, z, BLOCK_AIR);
-        world.updateMeshes();
-        inputState.break = false;
+  const x = Math.floor(player.pos.x);
+  const y = Math.floor(player.pos.y - 1);
+  const z = Math.floor(player.pos.z);
+  setBlockGlobal(x, y, z, BLOCK_AIR);
+  inputState.break = false;
       }
+      
     }
 
     // --- Screenshot Download Logic ---
@@ -978,12 +1010,10 @@ updateChunksAroundPlayer(player, scene);
     sun.position.set(10, 30, 10);
     scene.add(sun);
     
-
-    // ---------- World & player ----------
-    const player = {
-      pos: new THREE.Vector3(Math.floor(WORLD_W/2)+0.5, WORLD_H + PLAYER_EYE - 2, Math.floor(WORLD_D/2)+0.5),
-      velocity: new THREE.Vector3(),
-      yaw: 0, pitch: 0,
+const player = {
+  pos: new THREE.Vector3(0, 5, 0),
+  velocity: new THREE.Vector3(),
+  yaw: 0,
       speed: 4.0, jumpVel: 6.0, onGround: false
     };
     setupControls(player, camera);

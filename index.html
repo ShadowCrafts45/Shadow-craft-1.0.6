@@ -501,7 +501,10 @@
     }
     
     // ===== Optimized: flatter terrain, fewer trees, collision fixes, lower pixel ratio =====
-    const WORLD_W = 100, WORLD_H = 36, WORLD_D = 100;
+    const WORLD_H = 36, 
+      const CHUNK_SIZE = 32;
+const loadedChunks = new Map(); // key: `${cx},${cz}`, value: VoxelWorld
+    
     const PLAYER_EYE = 1.6;
     const JOY_DEADZONE = 0.18, MAX_JOY = 48;
     const BLOCK_AIR = 0;
@@ -649,39 +652,70 @@
     const cubeGeom = new THREE.BoxGeometry(1,1,1);
 
     class VoxelWorld {
-      constructor(w,h,d, scene){
-        this.w=w; this.h=h; this.d=d;
-        this.blocks = new Uint8Array(w*h*d);
-        this.group = new THREE.Group();
-        this._meshes = {};
-        if(scene) scene.add(this.group);
-        this.generateTerrain();
-        this.updateMeshes();
+  constructor(cx, cz, scene) {
+    this.cx = cx;
+    this.cz = cz;
+    this.w = CHUNK_SIZE;
+    this.h = WORLD_H;
+    this.d = CHUNK_SIZE;
+    this.blocks = new Uint8Array(this.w * this.h * this.d);
+    this.group = new THREE.Group();
+    this.group.position.set(cx * CHUNK_SIZE, 0, cz * CHUNK_SIZE);
+    if (scene) scene.add(this.group);
+    this.generateTerrain();
+    this.updateMeshes();
+        }
+      
+      generateTerrain() {
+  for (let x = 0; x < this.w; x++) {
+    for (let z = 0; z < this.d; z++) {
+      const wx = x + this.cx * CHUNK_SIZE;
+      const wz = z + this.cz * CHUNK_SIZE;
+      const h = Math.floor(2 + Math.sin(wx * 0.05) * Math.cos(wz * 0.05) * 4);
+
+      let biome = 'plains';
+      if (wx % 60 < 20) biome = 'desert';
+      else if (wz % 80 < 20) biome = 'forest';
+
+      for (let y = 0; y < h; y++) {
+        let blockId = 1; // Dirt
+        if (biome === 'desert') blockId = y < h - 1 ? 6 : 6;
+        else if (biome === 'forest') blockId = y < h - 1 ? 2 : 3;
+        else blockId = y < h - 1 ? 1 : 3;
+
+        this.set(x, y, z, blockId);
       }
-      generateTerrain(){
-        for(let x=0;x<this.w;x++){
-          for(let z=0;z<this.d;z++){
-            // much flatter: low base + small noise
-            const ridge = Math.sin(x*0.08) * Math.cos(z*0.06);
-            let h = Math.floor(1 + 3*(0.5 + 0.5*ridge) + Math.floor(Math.random()*1));
-            const distEdge = Math.min(x,z,this.w-1-x,this.d-1-z);
-            if(distEdge < 3) h = Math.max(1, 1 + Math.floor(Math.random()*1.2));
-            for(let y=0;y<h;y++){
-              if(distEdge < 3) this.set(x,y,z,6); else if(y < h-1) this.set(x,y,z,2); else this.set(x,y,z,3);
-            }
-            // fewer trees
-            if(h>2 && Math.random() < 0.15 && distEdge >= 5){
-              const trunk = 2 + Math.floor(Math.random()*2);
-              for(let ty=h; ty<h+trunk && ty<this.h-1; ty++) this.set(x,ty,z,4);
-              const ly = Math.min(h+trunk, this.h-2);
-              for(let ix=-1; ix<=1; ix++) for(let iz=-1; iz<=1; iz++) for(let iy=0; iy<=1; iy++){
-                const lx=x+ix, lz=z+iz, lypos=ly+iy;
-                if(this.inBounds(lx,lypos,lz) && this.get(lx,lypos,lz)===BLOCK_AIR) this.set(lx,lypos,lz,5);
-              }
+
+      if (biome === 'forest' && Math.random() < 0.1) {
+        const treeH = 2 + Math.floor(Math.random() * 2);
+        for (let ty = h; ty < h + treeH; ty++) this.set(x, ty, z, 4);
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dz = -1; dz <= 1; dz++) {
+            for (let dy = 0; dy <= 1; dy++) {
+              const lx = x + dx, ly = h + treeH + dy, lz = z + dz;
+              if (this.inBounds(lx, ly, lz)) this.set(lx, ly, lz, 5);
             }
           }
         }
       }
+    }
+  }
+    }
+       function updateChunksAroundPlayer(player, scene) {
+  const cx = Math.floor(player.pos.x / CHUNK_SIZE);
+  const cz = Math.floor(player.pos.z / CHUNK_SIZE);
+
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dz = -1; dz <= 1; dz++) {
+      const key = `${cx + dx},${cz + dz}`;
+      if (!loadedChunks.has(key)) {
+        const chunk = new VoxelWorld(cx + dx, cz + dz, scene);
+        loadedChunks.set(key, chunk);
+      }
+    }
+  }
+    }
+      
       inBounds(x,y,z){ return x>=0 && y>=0 && z>=0 && x<this.w && y<this.h && z<this.d; }
       get(x,y,z){ if(!this.inBounds(x,y,z)) return BLOCK_AIR; return this.blocks[idx(x,y,z)]; }
       set(x,y,z,v){ if(!this.inBounds(x,y,z)) return; this.blocks[idx(x,y,z)] = v; }
@@ -756,7 +790,8 @@
 
     function tick() {
       requestAnimationFrame(tick);
-
+updateChunksAroundPlayer(player, scene);
+    
       // ✅ Always show HUD info
       hud.innerText = `Tick running\nSelected: ${BLOCKS[selectedBlockId].name}\nPlacing: ${allowPlacing ? 'ENABLED' : 'DISABLED'}`;
 
@@ -945,7 +980,6 @@
     
 
     // ---------- World & player ----------
-    const world = new VoxelWorld(WORLD_W, WORLD_H, WORLD_D, scene);
     const player = {
       pos: new THREE.Vector3(Math.floor(WORLD_W/2)+0.5, WORLD_H + PLAYER_EYE - 2, Math.floor(WORLD_D/2)+0.5),
       velocity: new THREE.Vector3(),

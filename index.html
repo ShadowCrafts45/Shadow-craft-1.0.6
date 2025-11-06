@@ -760,27 +760,24 @@
       // ✅ Always show HUD info
       hud.innerText = `Tick running\nSelected: ${BLOCKS[selectedBlockId].name}\nPlacing: ${allowPlacing ? 'ENABLED' : 'DISABLED'}`;
 
-      if (inputState.place && allowPlacing) {
-  const x = Math.floor(player.pos.x);
-  const y = Math.floor(player.pos.y - 1.5);
-  const z = Math.floor(player.pos.z);
+     if (inputState.place && allowPlacing) {
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(world.group.children, true);
 
-  // Only place if there's a block below or adjacent
-  const hasSupport = (
-    world.get(x, y - 1, z) !== BLOCK_AIR ||
-    world.get(x + 1, y, z) !== BLOCK_AIR ||
-    world.get(x - 1, y, z) !== BLOCK_AIR ||
-    world.get(x, y, z + 1) !== BLOCK_AIR ||
-    world.get(x, y, z - 1) !== BLOCK_AIR
-  );
+  if (intersects.length > 0) {
+    const hit = intersects[0];
+    const pos = hit.point.clone().add(hit.face.normal).floor();
+    const x = pos.x, y = pos.y, z = pos.z;
 
-  if (world.get(x, y, z) === BLOCK_AIR && hasSupport) {
-    world.set(x, y, z, selectedBlockId);
-    world.updateMeshes();
+    if (world.get(x, y, z) === BLOCK_AIR) {
+      world.set(x, y, z, selectedBlockId);
+      world.updateMeshes();
+    }
   }
 
   inputState.place = false;
-    }
+        }
+                
       
 
       if (inputState.break) {
